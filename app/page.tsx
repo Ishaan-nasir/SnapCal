@@ -14,20 +14,51 @@ export default function Home() {
 
   const handleFileSelect = async (file: File) => {
     // SECURITY FIX: Prevent browser tab crashing via massive OOM allocation
-    if (file.size > 6 * 1024 * 1024) {
-      setError("Image payload too large. Max 6MB allowed.");
+    if (file.size > 20 * 1024 * 1024) { // Bumped up since we do client compression
+      setError("Image payload too large. Max 20MB allowed before compression.");
       return;
     }
 
     setIsParsing(true);
     setError(null);
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = async () => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = async () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      const MAX_DIMENSION = 1200;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+           width = Math.round((width * MAX_DIMENSION) / height);
+           height = MAX_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setError("Failed to initialize compression.");
+        setIsParsing(false);
+        return;
+      }
+
+      // Draw and compress to lightweight JPEG
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      const base64String = dataUrl.split(",")[1];
+
       try {
-        const base64String = (reader.result as string).split(",")[1];
-        
         const response = await fetch("/api/parse", {
           method: "POST",
           headers: {
@@ -35,7 +66,7 @@ export default function Home() {
           },
             body: JSON.stringify({
               base64Image: base64String,
-              mimeType: file.type,
+              mimeType: "image/jpeg",
             }),
         });
 
@@ -67,12 +98,13 @@ export default function Home() {
       }
     };
     
-    reader.onerror = () => {
-      setError("Failed to read the file.");
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setError("Failed to decode the image for compression.");
       setIsParsing(false);
     };
 
-    reader.readAsDataURL(file);
+    img.src = objectUrl;
   };
 
   const handleEventsChange = (newEvents: TimetableEvent[]) => {
