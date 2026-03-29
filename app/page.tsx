@@ -83,6 +83,8 @@ export default function Home() {
           throw new Error(`Server Error (${response.status}): Failed to parse API response.`);
         }
 
+        console.log("🔥 RAW API RESPONSE:", data);
+
         if (!data.success) {
           throw new Error(data.error || "Parsing failed.");
         }
@@ -91,10 +93,14 @@ export default function Home() {
           throw new Error("Could not read timetable properly. Try cropping tighter.");
         }
 
+        if (data.events.length === 0) {
+          throw new Error("AI returned an empty schedule. The image might be too blurry or the model failed to read the shorthand.");
+        }
+
         setEvents(data.events);
       } catch (error) {
         const err = error as Error;
-        console.error("Upload error:", err);
+        console.error("🚨 PARSE ERROR:", err);
         setError(err.message || "An unexpected error occurred while parsing the image.");
       } finally {
         setIsParsing(false);
