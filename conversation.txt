@@ -1,0 +1,447 @@
+Here is a breakdown of how the current code works, followed by a guide on how to port this to Next.js using OpenRouter's free vision models.
+
+How the Current Code Works (The Pipeline)
+Image Ingestion (Drag & Drop / Upload)
+
+When you drop an image, the handleFile function uses the browser's native FileReader API.
+
+It reads the image and converts it into a Base64 string (a text representation of the image data), which is required to send images over standard HTTP JSON requests.
+
+AI Vision Extraction (processImageWithAI)
+
+The app constructs a prompt specifically instructing the AI to act as a data extractor and return only a JSON object.
+
+It sends the prompt and the Base64 image directly to the Gemini API (gemini-2.5-flash-preview).
+
+Crucial step: It uses responseMimeType: "application/json" to force the AI to return valid, structured JSON instead of conversational text.
+
+Data Parsing & State Update
+
+Once the AI returns the JSON, the code parses it, generates a unique ID (crypto.randomUUID()) for each event, and assigns a random color theme from the colorMap.
+
+This data is saved to the React events state.
+
+UI Rendering (The Calendar Grid)
+
+The calendar is a CSS Grid. The tricky part is positioning the events.
+
+It calculates the vertical position dynamically: top: (event.start - 8) * 96 pixels. (Since the calendar starts at 8:00 AM, 9:00 AM is 1 hour down. If 1 hour = 96px, 9:00 AM starts at 96px from the top).
+
+Height is calculated similarly: height: event.duration * 96 pixels.
+
+ICS Export (downloadICS)
+
+To make it importable to Google Calendar/Apple Calendar, it constructs an .ics text file.
+
+It finds the date of the next upcoming Monday and maps the day integers (0 for Monday, 1 for Tuesday) to actual real-world dates and times.
+
+It formats this into standard iCalendar syntax (BEGIN:VEVENT, DTSTART, etc.), creates a virtual file (Blob), and forces the browser to download it.
+
+How to build this in Next.js with OpenRouter
+The biggest architectural change when moving to Next.js is that you should never call AI APIs directly from the frontend (client-side). Doing so exposes your API key to anyone who inspects the website. Next.js solves this with API Routes (running securely on the server).
+
+Here is the step-by-step pipeline for Next.js:
+
+1. Setup Next.js
+Run npx create-next-app@latest timetable-app in your terminal. Accept the defaults (using App Router and Tailwind CSS).
+
+2. Create the Backend API Route
+Create a new file at app/api/extract/route.js (or .ts). This is where OpenRouter is called securely. OpenRouter uses the exact same format as the OpenAI API.
+
+JavaScript
+
+// app/api/extract/route.js
+import { NextResponse } from 'next/server';
+
+export async function POST(req) {
+  try {
+    const { base64Image } = await req.json();
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        // You can use a free vision model like google/gemini-2.5-flash via OpenRouter
+        model: "google/gemini-2.5-flash", 
+        response_format: { type: "json_object" }, // Ask for JSON
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extract the schedule from this image. Return STRICTLY JSON with a single array property called "events".
+                      Each object must have: title (string), location (string), day (integer 0-4 for Mon-Fri), start (float 24hr format, e.g. 9.5 for 9:30), duration (float in hours).`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    
+    // OpenRouter returns the text inside choices[0].message.content
+    const jsonString = data.choices[0].message.content;
+    const parsedData = JSON.parse(jsonString);
+
+    return NextResponse.json(parsedData);
+
+  } catch (error) {
+    console.error("API Error:", error);
+    return NextResponse.json({ error: "Failed to process image" }, { status: 500 });
+  }
+}
+3. Store your API Key
+Create a .env.local file in the root of your Next.js project and add your OpenRouter key:
+
+Code snippet
+
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+4. Update the Frontend (page.js)
+You will copy the App.jsx UI code into your Next.js app/page.js. However, you will change the processImageWithAI function so it talks to your own local Next.js API route instead of the external AI service directly.
+
+JavaScript
+
+// Inside your Next.js client component (make sure to add "use client"; at the top)
+
+const processImageWithAI = async (base64Data) => {
+  setIsProcessing(true);
+  setError(null);
+
+  try {
+    // Call YOUR Next.js secure backend
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64Image: base64Data })
+    });
+
+    if (!response.ok) throw new Error("Backend failed");
+
+    const parsedData = await response.json();
+    
+    if (parsedData.events && Array.isArray(parsedData.events)) {
+      const mappedEvents = parsedData.events.map((ev) => ({
+        ...ev,
+        id: crypto.randomUUID(),
+        color: colorKeys[Math.floor(Math.random() * colorKeys.length)]
+      }));
+      setEvents(mappedEvents);
+    }
+  } catch (err) {
+    setError("Failed to extract schedule. Please try a clearer image.");
+  } finally {
+    setIsProcessing(false);
+  }
+};
+This architecture is production-ready, hides your OpenRouter API key from the browser network tab, and allows you to easily swap out OpenRouter models in the backend without touching the frontend code.
+
+
+
+
+
+
+
+You said
+can you elaborate on the openrouted part as i have been trying to do it with openrouted but the issue i get is some formatting issue im mentioning below wait
+
+
+
+✓ Compiled /api/parse in 166ms (318 modules)
+
+Failed to parse fallback payload: {
+
+"title": "DV (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 0,
+
+"start": 9,
+
+"duration": 1
+
+}, {
+
+"title": "DS (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 0,
+
+"start": 9.5,
+
+"duration": 1
+
+}, {
+
+"title": "MP (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 0,
+
+"start": 10.4,
+
+"duration": 1
+
+}, {
+
+"title": "CS (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 0,
+
+"start": 11.3,
+
+"duration": 1
+
+}, {
+
+"title": "FDS (RN 101 AB 2)",
+
+"location": "RN 101 AB 2",
+
+"day": 0,
+
+"start": 12.2,
+
+"duration": 1
+
+}, {
+
+"title": "CAM (RN 101 AB 2)",
+
+"location": "RN 101 AB 2",
+
+"day": 1,
+
+"start": 9,
+
+"duration": 1
+
+}, {
+
+"title": "EC (RN 101 AB 2)",
+
+"location": "RN 101 AB 2",
+
+"day": 1,
+
+"start": 9.5,
+
+"duration": 1
+
+}, {
+
+"title": "FDS LAB (AWS 101)",
+
+"location": "AWS 101",
+
+"day": 1,
+
+"start": 10.4,
+
+"duration": 1
+
+}, {
+
+"title": "MP (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 1,
+
+"start": 12.2,
+
+"duration": 1
+
+}, {
+
+"title": "CS (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 1,
+
+"start": 13.1,
+
+"duration": 1
+
+}, {
+
+"title": "EG LAB (RN 119, ABI)",
+
+"location": "RN 119, ABI",
+
+"day": 2,
+
+"start": 9,
+
+"duration": 1
+
+}, {
+
+"title": "DS (LHC 03)",
+
+"location": "LHC 03",
+
+"day": 2,
+
+"start": 9.5,
+
+"duration": 1
+
+}, {
+
+"title": "EC LAB (104 Mechanical Workshop)",
+
+"location": "104 Mechanical Workshop",
+
+"day": 2,
+
+"start": 10.4,
+
+"duration": 1
+
+}, {
+
+"title": "DV (LHC 04)",
+
+"location": "LHC 04",
+
+"day": 2,
+
+"start": 11.3,
+
+"duration": 1
+
+}, {
+
+"title": "CAM (RN 101 AB 2)",
+
+"location": "RN 101 AB 2",
+
+"day": 2,
+
+"start": 12.2,
+
+"duration": 1
+
+}, {
+
+"title": "FDS (RN 101 AB 2)",
+
+"location": "RN 101 AB 2",
+
+"day": 2,
+
+"start": 13.1,
+
+"duration": 1
+
+}, {
+
+"title": "UHV (Online)",
+
+"location": "Online",
+
+"day": 2,
+
+"start": 14,
+
+"duration": 1
+
+}
+
+Parse API Error: Error: Model returned malformed JSON that bypasses validation rules.
+
+at parseTimetableImage (webpack-internal:///(rsc)/./lib/gemini.ts:114:15)
+
+at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+at async POST (webpack-internal:///(rsc)/./app/api/parse/route.ts:34:27)
+
+at async /Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57228
+
+at async eT.execute (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46851)
+
+at async eT.handle (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:58760)
+
+at async doRender (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:1366:42)
+
+at async cacheEntry.responseCache.get.routeKind (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:1588:28)
+
+at async DevServer.renderToResponseWithComponentsImpl (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:1496:28)
+
+at async DevServer.renderPageComponent (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:1924:24)
+
+at async DevServer.renderToResponseImpl (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:1962:32)
+
+at async DevServer.pipeImpl (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:922:25)
+
+at async NextNodeServer.handleCatchallRenderRequest (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/next-server.js:272:17)
+
+at async DevServer.handleRequestImpl (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/base-server.js:818:17)
+
+at async /Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+
+at async Span.traceAsyncFn (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/trace/trace.js:154:20)
+
+at async DevServer.handleRequest (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+
+at async invokeRender (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/lib/router-server.js:179:21)
+
+at async handleRequest (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/lib/router-server.js:359:24)
+
+at async requestHandlerImpl (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/lib/router-server.js:383:13)
+
+at async Server.requestListener (/Users/kamalnasir/Desktop/Calender project/node_modules/next/dist/server/lib/start-server.js:141:13)
+
+POST /api/parse 500 in 25286ms
+
+
+
+
+Show thinking
+Gemini said
+The error you are seeing (Model returned malformed JSON) is very common when working with free or smaller LLM models via OpenRouter.
+
+What went wrong:
+Instead of returning a single JSON object containing an array (like { "events": [ ... ] }), the model got confused and returned a raw, comma-separated list of objects: {}, {}, {}. When JSON.parse() tries to read this, it crashes because {}, {}, {} is not valid JSON syntax on its own.
+
+How to fix it:
+To make this production-ready, we need to do two things in your backend (app/api/parse/route.ts):
+
+Bulletproof the Prompt: Give the model an exact visual template of the JSON it must return.
+
+Sanitize the Output: Write a small utility to clean up the text before parsing it, handling cases where the model returns markdown wrappers (like ```json) or raw arrays/lists.
+
+Here is the updated code for your app/api/parse/route.ts file. Replace your current API logic with this:
+
+TypeScript
+
+import { NextResponse } from 'next/server';
+
+// Utility to aggressively clean and parse unpredictable LLM output
+function parseLLMResponse(text: string) {
+  let cleanText = text.trim();
+
+  // 1. Strip markdown code blocks (```json ... ```)
+  cleanText = cleanText.replace(/^
+http://googleusercontent.com/immersive_entry_chip/0
+
+### Why this fixes it:
+1. **The Template Prompt**: By giving the model a literal `{ "events": [...] }` template in the prompt, it is vastly more likely to output that exact structure instead of omitting the root object.
+2. **The `parseLLMResponse` wrapper**: If the model still disobeys and returns `{ "title": "DV" }, { "title": "DS" }` (as seen in your error log), the `catch` block intercepts it, wraps it in `[` and `]` to make it a valid JSON array, and safely assigns it to the `events` property.

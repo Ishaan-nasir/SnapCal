@@ -1,0 +1,178 @@
+"use client";
+
+import React from "react";
+import { Trash2, Plus } from "lucide-react";
+import { TimetableEvent, DayOfWeek } from "@/types";
+import { cn } from "@/lib/utils";
+
+interface EventsTableProps {
+  events: TimetableEvent[];
+  onChange: (events: TimetableEvent[]) => void;
+}
+
+const ALL_DAYS: DayOfWeek[] = ["MON", "TUE", "WED", "THU", "FRI"];
+
+export default function EventsTable({ events, onChange }: EventsTableProps) {
+  console.log("Events data received in table:", events);
+
+  const padTime = (t: string) => {
+    if (!t) return "";
+    return t.length === 4 ? `0${t}` : t;
+  };
+
+  const updateEvent = (index: number, updatedEvent: TimetableEvent) => {
+    const newEvents = [...events];
+    newEvents[index] = updatedEvent;
+    onChange(newEvents);
+  };
+
+  const removeEvent = (index: number) => {
+    const newEvents = events.filter((_, i) => i !== index);
+    onChange(newEvents);
+  };
+
+  const addEventRow = () => {
+    onChange([
+      ...events,
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        title: "",
+        room: "",
+        days: ["MON"],
+        start: "09:00",
+        end: "09:50",
+      },
+    ]);
+  };
+
+  const handleDayToggle = (event: TimetableEvent, day: DayOfWeek) => {
+    const hasDay = event.days.includes(day);
+    const newDays = hasDay
+      ? event.days.filter((d) => d !== day)
+      : [...event.days, day];
+    
+    // Maintain a basic sort order
+    const daySortMap: Record<DayOfWeek, number> = { MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6, SUN: 7 };
+    newDays.sort((a, b) => daySortMap[a] - daySortMap[b]);
+
+    return { ...event, days: newDays };
+  };
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center p-8 bg-white border border-gray-200 rounded-xl">
+        <p className="text-gray-500 mb-4">No events have been added yet.</p>
+        <button
+          onClick={addEventRow}
+          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+        >
+          <Plus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+          Add First Event
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white shadow overflow-x-auto sm:rounded-lg">
+      <table className="min-w-full divide-y divide-gray-200 table-fixed">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+              Title
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
+              Room
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[240px]">
+              Days
+            </th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Time (Start - End)
+            </th>
+            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {events.map((event, i) => (
+            <tr key={event.id} className="hover:bg-gray-50 group">
+              <td className="px-6 py-4 whitespace-nowrap align-top">
+                <input
+                  type="text"
+                  value={event.title || ""}
+                  onChange={(e) => updateEvent(i, { ...event, title: e.target.value })}
+                  placeholder="Subject"
+                  className="block w-full border-0 border-b border-transparent focus:border-blue-500 focus:ring-0 sm:text-sm bg-transparent px-0 pt-2 pb-1"
+                />
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap align-top">
+                <input
+                  type="text"
+                  value={event.room || ""}
+                  onChange={(e) => updateEvent(i, { ...event, room: e.target.value })}
+                  placeholder="Location"
+                  className="block w-full border-0 border-b border-transparent focus:border-blue-500 focus:ring-0 sm:text-sm bg-transparent px-0 pt-2 pb-1"
+                />
+              </td>
+              <td className="px-6 py-4 align-top">
+                <div className="flex flex-wrap gap-1">
+                  {ALL_DAYS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => updateEvent(i, handleDayToggle(event, d))}
+                      className={cn(
+                        "px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full transition-colors",
+                        (event.days || []).includes(d)
+                          ? "bg-blue-100 text-blue-800 border-[0.5px] border-blue-200"
+                          : "bg-gray-100 text-gray-500 border-[0.5px] border-gray-200 hover:bg-gray-200"
+                      )}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap align-top">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="time"
+                    value={padTime(event.start)}
+                    onChange={(e) => updateEvent(i, { ...event, start: e.target.value })}
+                    className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pt-2"
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="time"
+                    value={padTime(event.end)}
+                    onChange={(e) => updateEvent(i, { ...event, end: e.target.value })}
+                    className="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm pt-2"
+                  />
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-right align-top">
+                <button
+                  onClick={() => removeEvent(i)}
+                  className="text-red-600 hover:text-red-900 focus:outline-none p-2 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Remove row"
+                >
+                  <Trash2 className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="bg-gray-50 px-6 py-3 flex justify-start items-center border-t border-gray-200">
+        <button
+          onClick={addEventRow}
+          className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          Add Row
+        </button>
+      </div>
+    </div>
+  );
+}
