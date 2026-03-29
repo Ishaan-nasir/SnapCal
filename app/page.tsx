@@ -87,8 +87,11 @@ export default function Home() {
           throw new Error(data.error || "Parsing failed.");
         }
 
-        const fallbackEvents = Array.isArray(data.events) ? data.events : [];
-        setEvents(fallbackEvents);
+        if (!data || !Array.isArray(data.events)) {
+          throw new Error("Could not read timetable properly. Try cropping tighter.");
+        }
+
+        setEvents(data.events);
       } catch (error) {
         const err = error as Error;
         console.error("Upload error:", err);
@@ -114,7 +117,7 @@ export default function Home() {
   const uniqueSubjectsCount = new Set(events.map((e) => e.title)).size;
   const daysCoveredCount = new Set(events.map((e) => e.day)).size;
 
-  const isHeroMode = events.length === 0 && !isParsing;
+  const isHeroMode = events.length === 0;
 
   return (
     <div className="min-h-screen bg-[#030712] flex flex-col text-gray-100 transition-colors duration-500">

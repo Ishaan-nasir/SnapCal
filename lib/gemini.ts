@@ -74,7 +74,7 @@ Output strict JSON ONLY:
 
   const pass2Payload = {
     contents: [{ parts: [{ text: pass2Prompt }] }],
-    generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+    generationConfig: { responseMimeType: "application/json", response_mime_type: "application/json", temperature: 0.1 }
   };
 
   const pass2Result = await failFastFetch(baseUrl, {
@@ -95,9 +95,19 @@ Output strict JSON ONLY:
     return hours + (minutes / 60);
   };
 
+  let parsedData;
+  const cleanJson = jsonText.replace(/```(?:json)?/gi, '').replace(/```/gi, '').trim();
+  
   try {
-    const cleanJson = jsonText.replace(/```(?:json)?/gi, '').replace(/```/gi, '').trim();
-    const parsedData = JSON.parse(cleanJson);
+    parsedData = JSON.parse(cleanJson);
+  } catch (err) {
+    console.error("Failed to parse JSON. Raw text:", jsonText);
+    const parseError = new Error("Failed to parse AI JSON response");
+    (parseError as any).raw = jsonText;
+    throw parseError;
+  }
+
+  try {
     const rawEvents = Array.isArray(parsedData.events) ? parsedData.events : [];
 
     interface RawEvent {
