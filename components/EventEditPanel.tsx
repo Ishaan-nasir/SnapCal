@@ -121,7 +121,7 @@ export default function EventEditPanel({ event, onSave, onClose, onDelete, isNew
           {!isNew ? (
             <button
               onClick={onDelete}
-              className="inline-flex items-center text-sm font-medium text-red-400 hover:text-red-300 focus:outline-none px-3 py-2 rounded-md hover:bg-red-950/50 border border-transparent hover:border-red-900/50 transition-colors"
+              className="inline-flex items-center text-sm font-medium text-red-400 hover:text-red-300 focus:outline-none px-3 py-2 rounded-md hover:bg-red-950/50 border border-transparent hover:border-red-900/50 transition-colors touch-manipulation"
             >
               <Trash2 className="h-4 w-4 mr-1.5" />
               Delete
@@ -130,13 +130,13 @@ export default function EventEditPanel({ event, onSave, onClose, onDelete, isNew
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-md shadow-sm hover:bg-gray-700 focus:outline-none transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-800 border border-gray-700 rounded-md shadow-sm hover:bg-gray-700 focus:outline-none transition-colors touch-manipulation"
             >
               Cancel
             </button>
             <button
               onClick={() => onSave(formData)}
-              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-500 focus:outline-none transition-colors"
+              className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-500 focus:outline-none transition-colors touch-manipulation"
             >
               Save Event
             </button>

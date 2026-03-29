@@ -72,14 +72,14 @@ export default function WeeklyCalendar({ events, onChange }: WeeklyCalendarProps
         <h2 className="text-lg font-semibold text-gray-100">Events Schedule</h2>
         <button
           onClick={handleCreateNew}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-colors"
+          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-500 shadow-sm transition-colors touch-manipulation"
         >
           <Plus className="h-4 w-4 mr-1.5" />
           Add Event
         </button>
       </div>
 
-      <div className="overflow-x-auto custom-scrollbar">
+      <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain custom-scrollbar">
         <div className="min-w-[700px]">
           {/* Header row */}
           <div className="grid grid-cols-[80px_1fr_1fr_1fr_1fr_1fr] border-b border-gray-800 bg-gray-900">

@@ -200,7 +200,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
             <div className="flex gap-2">
               <button
                 onClick={handleReset}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors touch-manipulation"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 New Image
@@ -209,7 +209,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
                 onClick={handleConfirmCrop}
                 disabled={!cropIsValid}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+                  "flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors touch-manipulation",
                   cropIsValid
                     ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -234,7 +234,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-2xl transition-colors cursor-pointer w-full mx-auto",
+        "flex flex-col items-center justify-center p-10 border-2 border-dashed rounded-2xl transition-colors cursor-pointer w-full mx-auto min-h-[200px] touch-manipulation",
         isDragActive ? "border-blue-500 bg-blue-50/50" : "border-gray-300 bg-gray-50 hover:bg-gray-100",
         isLoading && "opacity-50 cursor-not-allowed pointer-events-none"
       )}

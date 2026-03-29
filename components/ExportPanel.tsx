@@ -44,12 +44,12 @@ export default function ExportPanel({ events }: ExportPanelProps) {
   if (events.length === 0) return null;
 
   return (
-    <div className="bg-gray-900 rounded-xl shadow-sm border border-gray-800 p-6 space-y-4">
+    <div className="bg-gray-900 rounded-xl shadow-sm border border-gray-800 p-6 space-y-4 w-full max-w-md mx-auto">
       <h3 className="text-lg font-semibold text-gray-100 mb-4">Export Options</h3>
       
       <button
         onClick={handleDownloadICS}
-        className="w-full flex items-center justify-between px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg transition-colors group shadow-sm"
+        className="w-full flex items-center justify-between px-4 py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg transition-colors group shadow-sm touch-manipulation"
       >
         <div className="flex items-center space-x-3">
           <Download className="h-5 w-5" />
@@ -65,7 +65,7 @@ export default function ExportPanel({ events }: ExportPanelProps) {
         
         <button
           onClick={handleSubscribe}
-          className="w-full flex items-center justify-between px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors group shadow-sm"
+          className="w-full flex items-center justify-between px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors group shadow-sm touch-manipulation"
         >
           <div className="flex items-center space-x-3">
             <LinkIcon className="h-5 w-5" />
