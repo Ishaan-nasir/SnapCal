@@ -1,10 +1,12 @@
 import { Ratelimit } from "@upstash/ratelimit";
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 
-// Create a new ratelimiter that allows 3 requests per 24 hours
+// Explicitly pointing to the environment variables shown in our Vercel dashboard
 export const ratelimit = new Ratelimit({
-  redis: kv,
+  redis: new Redis({
+    url: process.env.KV_REST_API_URL || "",
+    token: process.env.KV_REST_API_TOKEN || "",
+  }),
   limiter: Ratelimit.slidingWindow(3, "24 h"),
-  analytics: true,
-  prefix: "@upstash/ratelimit/timetable",
+  prefix: "@upstash/ratelimit/snapcal",
 });
