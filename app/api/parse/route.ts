@@ -42,13 +42,13 @@ export async function POST(req: NextRequest): Promise<NextResponse<ParseAPIRespo
     const validEvents = rawEvents.filter((ev) => ev.title && ev.title.trim() !== "" && typeof ev.day === 'number');
 
     return NextResponse.json({ success: true, events: validEvents });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Parse API Error:", error);
     
     // Explicitly handle malformed AI JSON responses to log and pass down
-    if (error.raw) {
+    if (error && typeof error === 'object' && 'raw' in error) {
       return NextResponse.json(
-        { success: false, error: "Failed to parse AI JSON response", raw: error.raw },
+        { success: false, error: "Failed to parse AI JSON response", raw: (error as Record<string, unknown>).raw },
         { status: 500 }
       );
     }

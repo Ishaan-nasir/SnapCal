@@ -100,10 +100,10 @@ Output strict JSON ONLY:
   
   try {
     parsedData = JSON.parse(cleanJson);
-  } catch (err) {
+  } catch {
     console.error("Failed to parse JSON. Raw text:", jsonText);
-    const parseError = new Error("Failed to parse AI JSON response");
-    (parseError as any).raw = jsonText;
+    const parseError = new Error("Failed to parse AI JSON response") as Error & { raw?: string };
+    parseError.raw = jsonText;
     throw parseError;
   }
 
