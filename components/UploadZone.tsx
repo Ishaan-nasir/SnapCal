@@ -54,21 +54,21 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ── Crop drawing (mouse events on the overlay div) ──────────────
-  const getRelativePos = (e: React.MouseEvent) => {
+  // ── Crop drawing (pointer events on the overlay div) ──────────────
+  const getRelativePos = (e: React.PointerEvent) => {
     const rect = overlayRef.current!.getBoundingClientRect();
     return {
       x: Math.max(0, Math.min(e.clientX - rect.left, rect.width)),
       y: Math.max(0, Math.min(e.clientY - rect.top, rect.height)),
     };
   };
-  const onMouseDown = (e: React.MouseEvent) => {
+  const onPointerDown = (e: React.PointerEvent) => {
     const pos = getRelativePos(e);
     setDragStart(pos);
     setIsDrawing(true);
     setCropBox({ x: pos.x, y: pos.y, w: 0, h: 0 });
   };
-  const onMouseMove = (e: React.MouseEvent) => {
+  const onPointerMove = (e: React.PointerEvent) => {
     if (!isDrawing || !dragStart) return;
     const pos = getRelativePos(e);
     setCropBox({
@@ -78,7 +78,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
       h: Math.abs(pos.y - dragStart.y),
     });
   };
-  const onMouseUp = () => setIsDrawing(false);
+  const onPointerUp = () => setIsDrawing(false);
 
   // ── Confirm crop: draw on canvas → toBlob → new File ───────────
   const handleConfirmCrop = () => {
@@ -133,12 +133,13 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
         {/* Image + drag overlay */}
         <div
           ref={overlayRef}
-          className="relative w-full overflow-hidden rounded-xl border-2 border-blue-300 select-none"
+          className="relative w-full overflow-hidden rounded-xl border-2 border-blue-300 select-none touch-none"
           style={{ maxHeight: 320, cursor: isLoading ? "default" : "crosshair" }}
-          onMouseDown={isLoading ? undefined : onMouseDown}
-          onMouseMove={isLoading ? undefined : onMouseMove}
-          onMouseUp={isLoading ? undefined : onMouseUp}
-          onMouseLeave={isLoading ? undefined : onMouseUp}
+          onPointerDown={isLoading ? undefined : onPointerDown}
+          onPointerMove={isLoading ? undefined : onPointerMove}
+          onPointerUp={isLoading ? undefined : onPointerUp}
+          onPointerCancel={isLoading ? undefined : onPointerUp}
+          onPointerLeave={isLoading ? undefined : onPointerUp}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -180,7 +181,7 @@ export default function UploadZone({ onFileSelect, isLoading }: UploadZoneProps)
                 [cropBox.x, cropBox.y + cropBox.h],
                 [cropBox.x + cropBox.w, cropBox.y + cropBox.h],
               ].map(([cx, cy], i) => (
-                <circle key={i} cx={cx} cy={cy} r={4} fill="#3b82f6" />
+                <circle key={i} cx={cx} cy={cy} r={12} fill="#3b82f6" />
               ))}
             </svg>
           )}
