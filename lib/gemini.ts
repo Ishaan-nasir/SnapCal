@@ -18,7 +18,8 @@ export async function parseTimetableImage(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing GEMINI_API_KEY in .env.local");
 
-  const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+  const baseUrlFlash = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const baseUrlLite = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
   // ==========================================
   // PASS 1: SPATIAL GRID DESCRIPTION (IMAGE -> TEXT)
@@ -26,10 +27,15 @@ export async function parseTimetableImage(
   const pass1Prompt = `
 ACT AS A HIGH-SPEED OCR SCANNER.
 Analyze the timetable grid and output ONLY a shorthand text map.
-Format: [DAY] | [TIME] | [SUBJECT/BATCH] | [ROOM]
-Example: WED | 02:00 PM | STAT(T1) | E-201
-If a cell has multiple stacked classes (different batches), list each one on its own line.
 Do not write sentences. No introductions. Just the raw shorthand.
+
+Format: [DAY] | [START_TIME]-[END_TIME] | [SUBJECT/BATCH] | [ROOM]
+
+RULES:
+0. MUST convert all afternoon PM times to 24-HOUR FORMAT (e.g. "02:00" = "14:00").
+1. MERGED CELLS (LABS): When a subject spans two full columns, trace up from the LEFT edge to get the startTime, and from the RIGHT edge for the endTime. Output one single combined line.
+2. If a cell has multiple stacked classes, list each one on its own line.
+3. CRITICAL: IGNORE EMPTY CELLS ENTIRELY. Do not output anything for blank spots.
 `;
 
 
@@ -43,7 +49,7 @@ Do not write sentences. No introductions. Just the raw shorthand.
     generationConfig: { temperature: 0.1 }
   };
 
-  const pass1Result = await failFastFetch(baseUrl, {
+  const pass1Result = await failFastFetch(baseUrlFlash, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pass1Payload)
@@ -51,6 +57,8 @@ Do not write sentences. No introductions. Just the raw shorthand.
 
   const gridDescription = pass1Result.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!gridDescription) throw new Error("Pass 1 Failed: Could not read grid structure.");
+
+  console.log("💡 [Pass 1 AI Output]:\n", gridDescription.substring(0, 500) + "...\n");
 
   // ==========================================
   // PASS 2: JSON EXTRACTION (TEXT -> JSON)
@@ -77,7 +85,7 @@ Output strict JSON ONLY:
     generationConfig: { responseMimeType: "application/json", response_mime_type: "application/json", temperature: 0.1 }
   };
 
-  const pass2Result = await failFastFetch(baseUrl, {
+  const pass2Result = await failFastFetch(baseUrlLite, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(pass2Payload)
@@ -85,6 +93,8 @@ Output strict JSON ONLY:
 
   const jsonText = pass2Result.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!jsonText) throw new Error("Pass 2 Failed: Could not format JSON.");
+
+  console.log("💡 [Pass 2 AI Output]:\n", jsonText.substring(0, 500) + "...\n");
 
   // ==========================================
   // POST-PROCESSING & SANITIZATION
@@ -108,7 +118,12 @@ Output strict JSON ONLY:
   }
 
   try {
-    const rawEvents = Array.isArray(parsedData.events) ? parsedData.events : [];
+    let rawEvents = [];
+    if (Array.isArray(parsedData.events)) {
+      rawEvents = parsedData.events;
+    } else if (Array.isArray(parsedData)) {
+      rawEvents = parsedData; // Defensive: AI returned [ {...} ] directly
+    }
 
     interface RawEvent {
       title?: string;

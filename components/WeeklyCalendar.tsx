@@ -92,7 +92,7 @@ export default function WeeklyCalendar({ events, onChange }: WeeklyCalendarProps
           </div>
 
           {/* Grid area */}
-          <div className="relative bg-gray-900" style={{ height: 600 }}>
+          <div className="relative bg-gray-900" style={{ height: 1000 }}>
             {/* Horizontal lines every hour = 96px now as we span 10h total over 960px or similar */}
             {TIME_LABELS.map((label, idx) => (
               <div 
